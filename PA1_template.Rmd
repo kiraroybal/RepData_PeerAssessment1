@@ -1,25 +1,99 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible Research Project 1"
+author: "Kira Roybal"
+date: "1/8/2019"
+output: html_document
 ---
+1. Loading and preprocessing the data
 
+```{r, echo = TRUE}
+active <- read.csv("activity.csv", header = TRUE, stringsAsFactors = FALSE)
+active$date <- as.Date(as.character(active$date), "%Y-%m-%d")
+```
 
-## Loading and preprocessing the data
+2. What is the mean total number of steps taken per day?
 
+```{r, echo = TRUE}
+total.steps <- tapply(active$steps, active$date, sum, na.rm = TRUE)
+hist(total.steps, main = "Histogram of Total Steps Per Day, Oct-Nov 2012",
+     xlab = "Total Steps Per Day", breaks = 10, col = "green")
+mean(total.steps)
+median(total.steps)
+```
+The mean total steps is about 9,354 steps and the median is 10,395 steps. We can notice a discrepancy because the mean is dragged down by people who walked few total steps (who may be outliers) and by the minimum total steps, which is zero.
 
+3. What is the average daily activity pattern?
+```{r, echo = TRUE}
+avg.steps <- aggregate(active$steps, list(active$interval), mean, na.rm = TRUE)
+fives <- active$interval[1:288]
+plot(fives, avg.steps$x, type = "l", 
+                  xlab = "5 Minute Interval", 
+                  ylab = "Average Number of Steps Taken")
+index <- which.max(avg.steps$x) #index of max number of avg steps taken
+fives[index]
+```
+The interval 835 contains the maximum number of steps, on average across all days. 
 
-## What is mean total number of steps taken per day?
+4. Imputing missing values
+```{r, echo = TRUE}
+table(is.na(active))
+```
+We can see from the table that there are 2,304 missing values. 
 
+```{r, echo = TRUE}
+#fill in the missing steps with the mean of that five minute interval
+active2 <- active
+for (i in 1:length(active2$steps)) {
+    if (is.na(active2$steps[i])) {
+        int <- active2$interval[i]
+        means <- aggregate(active2$steps, list(active2$interval), 
+                           mean, na.rm = TRUE)
+        indx <- which(means$Group.1 == int)
+        active2$steps[i] <- means$x[indx]
+    }
+}
 
+total.steps2 <- tapply(active2$steps, active2$date, sum)
+hist(total.steps2, main = "Histogram of Total Steps Per Day, Oct-Nov 2012",
+     xlab = "Total Steps Per Day", breaks = 10, col = "red")
+mean(total.steps2)
+median(total.steps2)
 
-## What is the average daily activity pattern?
+#fill in the missing steps with the median of that five minute interval
+active3 <- active
+for (i in 1:length(active3$steps)) {
+    if (is.na(active3$steps[i])) {
+        int <- active3$interval[i]
+        medians <- aggregate(active3$steps, list(active3$interval), 
+                           median, na.rm = TRUE)
+        indx <- which(medians$Group.1 == int)
+        active3$steps[i] <- medians$x[indx]
+    }
+}
 
+total.steps3 <- tapply(active3$steps, active3$date, sum)
+hist(total.steps3, main = "Histogram of Total Steps Per Day, Oct-Nov 2012",
+     xlab = "Total Steps Per Day", breaks = 10, col = "red")
+mean(total.steps3)
+median(total.steps3)
+```
+The degree of impact that imputing the data has on the estimates of the total daily step count depends on how one imputes the data. Using the mean number of steps for an interval as the estimate for an NA results in a noticeable change in the mean and median for the total step count: both are 10,766 steps as opposed to 9,354 steps and 10,395 steps, respectively, for question 1. Using the median number of steps for an interval as the estimate results in very small changes: the mean total step count is now 9,504 and the median is 10,395, the same as in question 1. 
 
+5. Are there differences in activity patterns between weekdays and weekends?
+```{r, echo = TRUE}
+active3$day <- weekdays(active3$date)
+for (i in 1:length(active3$day)) {
+    if (active3$day[i] == "Saturday" | active3$day[i] == "Sunday") {
+        active3$day[i] <- "weekend"
+    }
+    else { active3$day[i] <- "weekday" }
+}
 
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+library(ggplot2)
+avg.steps2 <- aggregate(active3$steps, list(active3$interval, active3$day), 
+                        mean, na.rm = TRUE)
+names(avg.steps2) <- c("interval", "day", "mean.steps")
+g <- ggplot(avg.steps2, aes(interval, mean.steps))
+g + geom_line() + facet_grid(day~.) + xlab("Interval") + 
+    ylab("Average Number of Steps")
+```
