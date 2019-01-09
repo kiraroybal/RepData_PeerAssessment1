@@ -3,6 +3,7 @@ title: "Reproducible Research Project 1"
 author: "Kira Roybal"
 date: "1/8/2019"
 output: html_document
+keep_md: true
 ---
 1. Loading and preprocessing the data
 
